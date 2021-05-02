@@ -28,6 +28,59 @@ public class API {
         gson = new Gson();
     }
 
+    @GET
+    @Path("/api/getteam")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getteam(@HeadParam("X-Auth-API-Key") String authKey) {
+	return null;
+    }
+
+    @GET
+    @Path("/api/reset")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response reset(@HeadParam("X-Auth-API-Key") String authKey) {
+	return null;
+    }
+    @GET
+    @Path("/api/zipalertlist")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response ziperalertlist(@HeadParam("X-Auth-API-Key") String authKey) {
+
+	return null;
+    }
+
+    @GET
+    @Path("/api/alertlist")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response alertlist(@HeadParam("X-Auth-API-Key") String authKey) {
+
+	return null;
+    }
+
+    @GET
+    @Path("/api/testcount")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response testcount(@HeadParam("X-Auth-API-Key") String authKey) {
+
+	return null;
+    }
+
+    @GET
+    @Path("/api/getpatient")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response testcount(@HeadParam("X-Auth-API-Key") String authKey) {
+
+	return null;
+    }
+
+    @GET
+    @Path("/api/gethospital")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response gethospital(@HeadParam("X-Auth-API-Key") String authKey) {
+	return null;
+    }
+
+
     //check local
     //curl --header "X-Auth-API-key:1234" "http://localhost:8082/api/checkmycep"
 
@@ -38,81 +91,81 @@ public class API {
     //check remote
     //curl --header "X-Auth-API-key:1234" "http://[linkblueid].cs.uky.edu:8081/api/checkmycep"
 
-    @GET
-    @Path("/checkmycep")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response checkMyEndpoint(@HeaderParam("X-Auth-API-Key") String authKey) {
-        String responseString = "{}";
-        try {
+    //@GET
+    //@Path("/checkmycep")
+    //@Produces(MediaType.APPLICATION_JSON)
+    //public Response checkMyEndpoint(@HeaderParam("X-Auth-API-Key") String authKey) {
+    //    String responseString = "{}";
+    //    try {
 
-            //get remote ip address from request
-            String remoteIP = request.get().getRemoteAddr();
-            //get the timestamp of the request
-            long access_ts = System.currentTimeMillis();
-            System.out.println("IP: " + remoteIP + " Timestamp: " + access_ts);
+    //        //get remote ip address from request
+    //        String remoteIP = request.get().getRemoteAddr();
+    //        //get the timestamp of the request
+    //        long access_ts = System.currentTimeMillis();
+    //        System.out.println("IP: " + remoteIP + " Timestamp: " + access_ts);
 
-            Map<String,String> responseMap = new HashMap<>();
-            if(Launcher.cepEngine != null) {
+    //        Map<String,String> responseMap = new HashMap<>();
+    //        if(Launcher.cepEngine != null) {
 
-                    responseMap.put("success", Boolean.TRUE.toString());
-                    responseMap.put("status_desc","CEP Engine exists");
+    //                responseMap.put("success", Boolean.TRUE.toString());
+    //                responseMap.put("status_desc","CEP Engine exists");
 
-            } else {
-                responseMap.put("success", Boolean.FALSE.toString());
-                responseMap.put("status_desc","CEP Engine is null!");
-            }
+    //        } else {
+    //            responseMap.put("success", Boolean.FALSE.toString());
+    //            responseMap.put("status_desc","CEP Engine is null!");
+    //        }
 
-            responseString = gson.toJson(responseMap);
+    //        responseString = gson.toJson(responseMap);
 
 
-        } catch (Exception ex) {
+    //    } catch (Exception ex) {
 
-            StringWriter sw = new StringWriter();
-            ex.printStackTrace(new PrintWriter(sw));
-            String exceptionAsString = sw.toString();
-            ex.printStackTrace();
+    //        StringWriter sw = new StringWriter();
+    //        ex.printStackTrace(new PrintWriter(sw));
+    //        String exceptionAsString = sw.toString();
+    //        ex.printStackTrace();
 
-            return Response.status(500).entity(exceptionAsString).build();
-        }
-        return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
-    }
+    //        return Response.status(500).entity(exceptionAsString).build();
+    //    }
+    //    return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
+    //}
 
-    @GET
-    @Path("/getaccesscount")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getAccessCount(@HeaderParam("X-Auth-API-Key") String authKey) {
-        String responseString = "{}";
-        try {
+    //@GET
+    //@Path("/getaccesscount")
+    //@Produces(MediaType.APPLICATION_JSON)
+    //public Response getAccessCount(@HeaderParam("X-Auth-API-Key") String authKey) {
+    //    String responseString = "{}";
+    //    try {
 
-            //get remote ip address from request
-            String remoteIP = request.get().getRemoteAddr();
-            //get the timestamp of the request
-            long access_ts = System.currentTimeMillis();
-            System.out.println("IP: " + remoteIP + " Timestamp: " + access_ts);
+    //        //get remote ip address from request
+    //        String remoteIP = request.get().getRemoteAddr();
+    //        //get the timestamp of the request
+    //        long access_ts = System.currentTimeMillis();
+    //        System.out.println("IP: " + remoteIP + " Timestamp: " + access_ts);
 
-            //generate event based on access
-            String inputEvent = gson.toJson(new accessRecord(remoteIP,access_ts));
-            System.out.println("inputEvent: " + inputEvent);
+    //        //generate event based on access
+    //        String inputEvent = gson.toJson(new accessRecord(remoteIP,access_ts));
+    //        System.out.println("inputEvent: " + inputEvent);
 
-            //send input event to CEP
-            Launcher.cepEngine.input(Launcher.inputStreamName, inputEvent);
+    //        //send input event to CEP
+    //        Launcher.cepEngine.input(Launcher.inputStreamName, inputEvent);
 
-            //generate a response
-            Map<String,String> responseMap = new HashMap<>();
-            responseMap.put("accesscoint",String.valueOf(Launcher.accessCount));
-            responseString = gson.toJson(responseMap);
+    //        //generate a response
+    //        Map<String,String> responseMap = new HashMap<>();
+    //        responseMap.put("accesscoint",String.valueOf(Launcher.accessCount));
+    //        responseString = gson.toJson(responseMap);
 
-        } catch (Exception ex) {
+    //    } catch (Exception ex) {
 
-            StringWriter sw = new StringWriter();
-            ex.printStackTrace(new PrintWriter(sw));
-            String exceptionAsString = sw.toString();
-            ex.printStackTrace();
+    //        StringWriter sw = new StringWriter();
+    //        ex.printStackTrace(new PrintWriter(sw));
+    //        String exceptionAsString = sw.toString();
+    //        ex.printStackTrace();
 
-            return Response.status(500).entity(exceptionAsString).build();
-        }
-        return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
-    }
+    //        return Response.status(500).entity(exceptionAsString).build();
+    //    }
+    //    return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
+    //}
 
 
 }
