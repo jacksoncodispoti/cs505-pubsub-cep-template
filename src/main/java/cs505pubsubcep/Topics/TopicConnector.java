@@ -7,6 +7,7 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DeliverCallback;
 import cs505pubsubcep.Launcher;
+import cs505pubsubcep.CEP.CEPEngine;
 
 import java.lang.reflect.Type;
 import java.util.List;
@@ -58,7 +59,7 @@ public class TopicConnector {
                 List<Map<String,String>> incomingList = gson.fromJson(message, typeOf);
                 for(Map<String,String> map : incomingList) {
                     System.out.println("INPUT CEP EVENT: " +  map);
-                    Launcher.cepEngine.input(Launcher.inputStreamName, map);
+                    Launcher.cepEngine.input(CEPEngine.INPUT_STREAM_NAME, map);
                     //Launcher.cepEngine.input(Launcher.inputStreamName, gson.toJson(map));
                 }
                 System.out.println("");

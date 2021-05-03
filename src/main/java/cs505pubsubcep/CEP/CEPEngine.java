@@ -14,10 +14,11 @@ public class CEPEngine {
     public int PositiveTests = 0;
     public int NegativeTests = 0;
 
+    public static final String INPUT_STREAM_NAME = "PatientInStream";
+    public static final String OUTPUT_STREAM_NAME = "PatientOutStream";
     private SiddhiManager siddhiManager;
     private SiddhiAppRuntime siddhiAppRuntime;
     private Map<String,String> topicMap;
-
 
     private Gson gson;
 
@@ -50,25 +51,61 @@ public class CEPEngine {
     }
 
 
-    public void createCEP(String inputStreamName, String outputStreamName, String inputStreamAttributesString, String outputStreamAttributesString,String queryString) {
+    private String createStreams() {
+	//Input stream
+	String inputStreamName = "PatientInStream";
+	String inputStreamAttributes = "first_name string, last_name string, mrn string, zip_code string, patient_status_code string";
+	String sourceString = getSourceString(inputStreamName, inputStreamAttributes);
 
+	//Output stream
+	String outputStreamAttributes = "patient_status_code string, count long";
+	String outputStream = getSinkString(OUTPUT_STREAM_NAME, outputStreamAttributes);
+
+	//15 Second ZipCodePositiveStream
+	String zipStream15Name = "ZipPositive15";
+	String zipStream15Attributes = "zip_code string, count long";
+	String zipStream15 = getSinkString(zipStream15Name, zipStream15Attributes);
+
+	//30 Second ZipCodePositiveStream
+	String zipStream30Name = "ZipPositive30";
+	String zipStream30Attributes = "zip_code string, count long";
+	String zipStream30 = getSinkString(zipStream30Name, zipStream30Attributes);
+
+	return sourceString + outputStream + zipStream15 + zipStream30;
+    }
+
+    private String createTables() {
+	return "";
+    }
+    private String createQueries() {
+	String defaultQuery = " " +
+		"from PatientInStream#window.timeBatch(5 sec) " +
+                "select patient_status_code, count() as count " +
+                "group by patient_status_code " +
+                "insert into PatientOutStream; ";
+
+        String zip15Query = " " +
+                "FROM PatientInStream#window.timeBatch(15 sec)[patient_status_code == '2' OR patient_status_code == '5' OR patient_status_code == '6'] " +
+                "SELECT zip_code, count() as count " +
+		"INSERT INTO ZipPositive15;";
+
+	String zip30Query = " " +
+                "FROM PatientInStream#window.timeBatch(30 sec)[patient_status_code == '2' OR patient_status_code == '5' OR patient_status_code == '6'] " +
+                "SELECT zip_code, count() as count " +
+		"INSERT INTO ZipPositive30;";
+
+	return defaultQuery + zip15Query + zip30Query;
+    }
+    private String createDatabase() {
+	return createStreams() + createTables();
+    }
+
+    public void createCEP() {
         try {
+	String createDatabaseString = createDatabase();
+            siddhiAppRuntime = siddhiManager.createSiddhiAppRuntime(createDatabaseString);
 
-            String inputTopic = UUID.randomUUID().toString();
-            String outputTopic = UUID.randomUUID().toString();
-
-            topicMap.put(inputStreamName,inputTopic);
-            topicMap.put(outputStreamName,outputTopic);
-
-            String sourceString = getSourceString(inputStreamAttributesString, inputTopic, inputStreamName);
-            System.out.println("sourceString: [" + sourceString + "]");
-            String sinkString = getSinkString(outputTopic,outputStreamName,outputStreamAttributesString);
-            System.out.println("sinkString: [" + sinkString + "]");
-            //Generating runtime
-
-            siddhiAppRuntime = siddhiManager.createSiddhiAppRuntime(sourceString + " " + sinkString + " " + queryString);
-
-            InMemoryBroker.Subscriber subscriberTest = new OutputSubscriber(outputTopic,outputStreamName);
+            InMemoryBroker.Subscriber subscriberTest = new OutputSubscriber(topicMap.get(OUTPUT_STREAM_NAME), OUTPUT_STREAM_NAME);
 
             //subscribe to "inMemory" broker per topic
             InMemoryBroker.subscribe(subscriberTest);
@@ -98,7 +135,6 @@ public class CEPEngine {
 
     public void input(String streamName, Map<String, String> payload) {
         try {
-
             if (topicMap.containsKey(streamName)) {
                 //InMemoryBroker.publish(topicMap.get(streamName), getByteGenericDataRecordFromString(schemaMap.get(streamName),jsonPayload));
 		String jsonPayload = gson.toJson(payload);
@@ -115,10 +151,12 @@ public class CEPEngine {
     }
 
 
-    private String getSourceString(String inputStreamAttributesString, String topic, String streamName) {
+    private String getSourceString(String streamName, String inputStreamAttributesString) {
         String sourceString = null;
         try {
-
+		String topic = UUID.randomUUID().toString();
+		topicMap.put(streamName, topic);
+	
             sourceString  = "@source(type='inMemory', topic='" + topic + "', @map(type='json')) " +
                     "define stream " + streamName + " (" + inputStreamAttributesString + "); ";
 
@@ -129,10 +167,11 @@ public class CEPEngine {
         return sourceString;
     }
 
-    private String getSinkString(String topic, String streamName, String outputSchemaString) {
+    private String getSinkString(String streamName, String outputSchemaString) {
         String sinkString = null;
         try {
-
+		String topic = UUID.randomUUID().toString();
+		topicMap.put(streamName, topic);
             sinkString = "@sink(type='inMemory', topic='" + topic + "', @map(type='json')) " +
                     "define stream " + streamName + " (" + outputSchemaString + "); ";
 
