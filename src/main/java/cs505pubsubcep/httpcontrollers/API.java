@@ -6,9 +6,13 @@ import com.google.gson.JsonArray;
 import cs505pubsubcep.CEP.accessRecord;
 import cs505pubsubcep.Launcher;
 
+import io.siddhi.core.event.Event;
+
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -45,13 +49,8 @@ public class API {
 	teamMembers.add(12200587);
 	teamMembers.add(12346767);
 
-	//repsonse.addProperty("app_status_code", "1");
-
-	//responseMap.put("team_name", "NickAndJackson");
 	response.add("team_member_sids", teamMembers);
-	//responseMap.put("app_status_code", "1");
 	String responseString = gson.toJson(response);
-	//String responseString = gson.toJson(responseMap);
 
 	return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
     }
@@ -66,7 +65,19 @@ public class API {
     @Path("/zipalertlist")
     @Produces(MediaType.APPLICATION_JSON)
     public Response ziperalertlist(@HeaderParam("X-Auth-API-Key") String authKey) {
+/*
+	JsonObject response = new JsonObject();
 
+	JsonArray teamMembers = new JsonArray();
+	Statement stm = Launcher.dbEngine.getStatement();
+	String query = "from ZipPositive15 Select zip_code ";
+	ResultSet results = stm.executeQuery(query)
+	
+	for(
+	teamMembers.add(12200587);
+	
+	response.add("team_member_sids", teamMembers);
+	*/
 	return null;
     }
 
@@ -89,28 +100,37 @@ public class API {
 	response.addProperty("positive_test", Launcher.cepEngine.PositiveTests);
 	response.addProperty("negative_test", Launcher.cepEngine.NegativeTests);
 
-	JsonArray teamMembers = new JsonArray();
-	teamMembers.add(12200587);
-	teamMembers.add(12346767);
-
 	String responseString = gson.toJson(response);
 
 	return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
     }
 
     @GET
-    @Path("/getpatient")
+    @Path("/getpatient/{mrn}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getPatient(@HeaderParam("X-Auth-API-Key") String authKey) {
+    public Response getPatient(@HeaderParam("X-Auth-API-Key") String authKey, @PathParam("mrn") String mrn) {
+	    try {
+		    String patientInfo = Launcher.dbEngine.getPatient(mrn);
 
-	return null;
+		    return Response.ok(patientInfo).header("Access-Control-Allow-Origin", "*").build();
+	    }
+	    catch(Exception ex) {
+		return Response.ok(ex.getMessage()).header("Access-Control-Allow-Origin", "*").build();
+	    }
     }
 
     @GET
-    @Path("/gethospital")
+    @Path("/gethospital/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response gethospital(@HeaderParam("X-Auth-API-Key") String authKey) {
-	return null;
+    public Response gethospital(@HeaderParam("X-Auth-API-Key") String authKey, @PathParam("id") int id) {
+	try {
+		String hospitalInfo = Launcher.dbEngine.getHospital(id);
+
+		return Response.ok(hospitalInfo).header("Access-Control-Allow-Origin", "*").build();
+	}
+	catch(Exception ex) {
+		return Response.ok(ex.getMessage()).header("Access-Control-Allow-Origin", "*").build();
+	}
     }
 
 

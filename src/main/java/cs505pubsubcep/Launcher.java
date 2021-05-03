@@ -21,6 +21,11 @@ public class Launcher {
     public static TopicConnector topicConnector;
 
     public static CEPEngine cepEngine = null;
+    public static DBEngine dbEngine = null;
+
+    public static int messageCounter = 0;
+    public static String message30 = "";
+
 
     public static void main(String[] args) throws IOException {
 
@@ -29,10 +34,12 @@ public class Launcher {
         //Embedded database initialization
 
         cepEngine = new CEPEngine();
+	dbEngine = new DBEngine();
 
 
         //cepEngine.createCEP(inputStreamName, outputStreamName, inputStreamAttributesString, outputStreamAttributesString, queryString);
         cepEngine.createCEP();
+	dbEngine.initDB();
 
         System.out.println("CEP Started...");
 

@@ -5,6 +5,9 @@ import org.apache.commons.dbcp2.*;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
 import javax.sql.DataSource;
 import java.io.File;
 import java.io.*;
@@ -23,9 +26,11 @@ import java.util.Map;
 public class DBEngine {
 
     private DataSource ds;
+    private Gson gson;
+    private HashMap<String, Boolean> patientMap = new HashMap<String, Boolean>();
 
     public DBEngine() {
-
+        gson = new Gson();
         try {
             //Name of database
             String databaseName = "myDatabase";
@@ -122,7 +127,7 @@ public class DBEngine {
 
 			String currentValues = "(";
 			for(int i = 0; i < headers.length; i++) {
-				if(headers[i].toLowerCase().equals("beds")) {
+				if(headers[i].toLowerCase().equals("beds")/* || headers[i].toLowerCase().equals("id")*/) {
 					currentValues += row[i];
 				}
 				else {
@@ -158,9 +163,116 @@ public class DBEngine {
 		return null;
 	}
     }
+
+    //private long getTimeStamp() {
+
+    //}
+    //public boolean isAlerted(int zipcode) throw Exception {
+    //    return isAlerted(String.valueOf(zipcode));
+    //}
+    //public boolean isAlerted(String zipcode) throw Exception {
+    //    Statement stmt = getStatement();
+    //    String query = "SELECT alerted, timestamp FROM alerts WHERE zip = '" + zipcode + "'";
+    //    ResultSet results = stmt.executeQuery(query);
+
+    //    while(results.next()) {
+    //    	int alerted = results.getInt(1);
+    //    	long timestamp = results.getLong(2);
+    //    }
+    //    return false;
+    //}
+
+    private void insertPatient(String mrn, String first_name, String last_name) {
+	patientMap.put(mrn, true);
+    }
+    private boolean isPatientInserted(String mrn) {
+	if(patientMap.containsKey(mrn)) {
+		return true;
+	}
+	else {
+		return false;
+	}
+    }
+    public void assignHospital(String mrn, String first_name, String last_name, int location_code) throws Exception {
+	Statement stmt = getStatement();
+
+	if(!isPatientInserted(mrn)) {
+		insertPatient(mrn, first_name, last_name);
+	}
+
+	int location_code_old = getPatientLocation(mrn);
+
+	if(location_code_old > 0) {
+		String removePatient = "UPDATE hospitals SET used_beds = used_beds - 1";
+		stmt.execute(removePatient);
+	}
+
+	String query = "UPDATE patients SET location_code = " + location_code + " WHERE mrn = '" + mrn + "'";
+	stmt.execute(query);
+
+	if(location_code > 0) {
+		String updateHospital = "UPDATE hospitals SET used_beds = used_beds + 1 WHERE id = '" + location_code + "'";
+		stmt.execute(updateHospital);
+	}
+    }
+    private int getPatientLocation(String mrn) throws Exception {
+	Statement stmt = getStatement();
+	String query = "SELECT location_code FROM patients WHERE mrn = '" + mrn + "'";
+	ResultSet results = stmt.executeQuery(query);
+
+	while(results.next()) {
+		int location_id = results.getInt(1);
+
+		return location_id;
+	}
+	return -1;
+    }
+
+    public String getPatient(String mrn) throws Exception {
+	int location_code = getPatientLocation(mrn);
+	JsonObject response = new JsonObject();
+	response.addProperty("location_code", location_code);
+	response.addProperty("mrn", mrn);
+
+	return gson.toJson(response);
+    }
+
+    public String getHospital(int id) throws Exception {
+	Statement stmt = getStatement();
+	String query = "SELECT beds, used_beds, zip FROM hospitals WHERE id = '" + id + "'";
+	ResultSet results = stmt.executeQuery(query);
+
+	while(results.next()) {
+		int beds = results.getInt(1);
+		int used_beds = results.getInt(2);
+		int available_beds = beds - used_beds;
+
+		String zipCode = results.getString(3);
+		JsonObject response = new JsonObject();
+		response.addProperty("total_beds", beds);
+		response.addProperty("available_beds", available_beds);
+		response.addProperty("zipcode", zipCode);
+
+		return gson.toJson(response);
+	}
+	return "Patient not found";
+    }
+
+    public void restartDB() {
+	if(tableExist("hospitals"))
+		dropTable("hospitals");
+	if(tableExist("patients"))
+		dropTable("patients");
+	if(tableExist("alerts"))
+		dropTable("alerts");
+
+	initDB();
+    }
+
     public void initDB() {
 	String createHospitals = "CREATE TABLE hospitals(" +
-			"id VARCHAR(64), " +
+			"id VARCHAR(10), " +
+			//"id INTEGER, " +
 			"name VARCHAR(64)," +
 			"address VARCHAR(64)," +
 			"city VARCHAR(64)," +
@@ -180,6 +292,7 @@ public class DBEngine {
 			"helipad VARCHAR(2)," +
 			"used_beds INTEGER DEFAULT 0" +
 		")";
+	
 	String createPatients = "CREATE TABLE patients(" +
 			"mrn VARCHAR(64)," +
 			"first_name VARCHAR(64)," + 
@@ -187,11 +300,21 @@ public class DBEngine {
 			"location_code INTEGER DEFAULT -1" +
 		")";
 
+	String createAlertList = "CREATE TABLE alerts(" +
+			"zip VARCHAR(5)," +
+			"alerted int default 0," +
+			"timestamp BIGINT" +
+		")";
+
         try {
             try(Connection conn = ds.getConnection()) {
                 try (Statement stmt = conn.createStatement()) {
-                    stmt.executeUpdate(createHospitals);
-                    stmt.executeUpdate(createPatients);
+			if(!tableExist("hospitals"))
+			    stmt.executeUpdate(createHospitals);
+			if(!tableExist("patients"))
+			    stmt.executeUpdate(createPatients);
+			if(!tableExist("alerts"))
+			    stmt.executeUpdate(createAlertList);
 		    loadData(stmt);
                 }
             }

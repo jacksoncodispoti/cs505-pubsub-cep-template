@@ -5,10 +5,17 @@ import io.siddhi.core.SiddhiAppRuntime;
 import io.siddhi.core.SiddhiManager;
 import io.siddhi.core.stream.output.sink.InMemorySink;
 import io.siddhi.core.util.transport.InMemoryBroker;
+import io.siddhi.core.event.Event;
+import io.siddhi.core.table.Table;
 
+import java.io.*;
+import java.util.*;
+import java.util.Scanner;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.opencsv.CSVReader;
 
 public class CEPEngine {
 	public int PositiveTests = 0;
@@ -57,27 +64,28 @@ public class CEPEngine {
 		String inputStreamAttributes = "first_name string, last_name string, mrn string, zip_code string, patient_status_code string";
 		String sourceString = getSourceString(inputStreamName, inputStreamAttributes);
 
+		//Hospital source
+		String hospitalStreamName = "HospitalInStream";
+		String hospitalStreamAttributes = "id string, name string, address string, city string, state string, zip string, type string, beds string, county string, countyfips string, country string, latitude string, longitude string, naics_code string, website string, owner string, trauma string, helipad string";
+		String hospitalString = getSourceString(hospitalStreamName, hospitalStreamAttributes);
+
 		//Output stream
 		String outputStreamAttributes = "patient_status_code string, count long";
 		String outputStream = getSinkString(OUTPUT_STREAM_NAME, outputStreamAttributes);
 
 		//15 Second ZipCodePositiveStream
 		String zipStream15Name = "ZipPositive15";
-		String zipStream15Attributes = "zip_code string, count long";
+		String zipStream15Attributes = "zip_code_15 string, count long";
 		String zipStream15 = getSinkString(zipStream15Name, zipStream15Attributes);
 
 		//30 Second ZipCodePositiveStream
 		String zipStream30Name = "ZipPositive30";
-		String zipStream30Attributes = "zip_code string, count long";
+		String zipStream30Attributes = "zip_code_30 string, count long";
 		String zipStream30 = getSinkString(zipStream30Name, zipStream30Attributes);
 
-		return sourceString + outputStream + zipStream15 + zipStream30;
+		return sourceString + hospitalString + outputStream + zipStream15 + zipStream30;
 	}
 
-	private String createTables() {
-		
-		return "";
-	}
 	private String createQueries() {
 		String defaultQuery = " " +
 			"from PatientInStream#window.timeBatch(5 sec) " +
@@ -87,18 +95,51 @@ public class CEPEngine {
 
 		String zip15Query = " " +
 			"FROM PatientInStream#window.timeBatch(15 sec)[patient_status_code == '2' OR patient_status_code == '5' OR patient_status_code == '6'] " +
-			"SELECT zip_code, count() as count " +
-			"INSERT INTO ZipPositive15;";
+			"SELECT zip_code as zip_code_15, count() as count " +
+			"GROUP BY zip_code_15 " +
+			"INSERT INTO ZipPositive15; ";
 
 		String zip30Query = " " +
 			"FROM PatientInStream#window.timeBatch(30 sec)[patient_status_code == '2' OR patient_status_code == '5' OR patient_status_code == '6'] " +
-			"SELECT zip_code, count() as count " +
-			"INSERT INTO ZipPositive30;";
+			"SELECT zip_code as zip_code_30, count() as count " +
+			"GROUP BY zip_code_30 " +
+			"INSERT INTO ZipPositive30; ";
 
 		return defaultQuery + zip15Query + zip30Query;
 	}
 	private String createDatabase() {
-		return createStreams() + createTables();
+		return createStreams() + createQueries();
+	}
+
+	private void loadHospitals(String file_path) throws IOException {
+		Scanner scanner = new Scanner(new File(file_path));
+		scanner.useDelimiter(",");
+		scanner.nextLine();
+
+		Reader reader = new FileReader(file_path);
+		CSVReader csvReader = new CSVReader(reader);
+
+		//skip header
+		String[] headers = csvReader.readNext();
+
+		String[] row;
+		while((row = csvReader.readNext()) != null) {
+			Map<String, String> hashMap = new HashMap<String, String>();
+
+			for(int i = 0; i < headers.length; i++)
+				hashMap.put(headers[i], row[i]);
+
+			input("HospitalInStream", hashMap);
+		}
+	}
+
+	private void loadData() throws IOException {
+		loadHospitals("/home/ndfl222/cs505project/src/main/java/cs505pubsubcep/data/hospitals.csv");
+	}
+
+	public Event[] query(String query) {
+		System.out.println("Siddhi happlication " + siddhiAppRuntime);
+		return siddhiAppRuntime.query(query);
 	}
 
 	public void createCEP() {
@@ -106,13 +147,17 @@ public class CEPEngine {
 			String createDatabaseString = createDatabase();
 			siddhiAppRuntime = siddhiManager.createSiddhiAppRuntime(createDatabaseString);
 
-			InMemoryBroker.Subscriber subscriberTest = new OutputSubscriber(topicMap.get(OUTPUT_STREAM_NAME), OUTPUT_STREAM_NAME);
+			InMemoryBroker.Subscriber subscriber15 = new OutputSubscriber(topicMap.get("ZipPositive15"), "ZipPositive15");
+			InMemoryBroker.Subscriber subscriber30 = new OutputSubscriber(topicMap.get("ZipPositive30"), "ZipPositive30");
 
 			//subscribe to "inMemory" broker per topic
-			InMemoryBroker.subscribe(subscriberTest);
+			InMemoryBroker.subscribe(subscriber15);
+			InMemoryBroker.subscribe(subscriber30);
 
 			//Starting event processing
 			siddhiAppRuntime.start();
+
+			loadData();
 
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -131,6 +176,8 @@ public class CEPEngine {
 			else if(statusCode == 2 || statusCode == 5 || statusCode == 6) {
 				NegativeTests += 1;
 			}
+			
+			//Do hospital assign logic
 		}
 	}
 
@@ -141,7 +188,6 @@ public class CEPEngine {
 				String jsonPayload = gson.toJson(payload);
 				preProcess(payload);
 				InMemoryBroker.publish(topicMap.get(streamName), jsonPayload);
-
 			} else {
 				System.out.println("input error : no schema");
 			}
@@ -182,5 +228,4 @@ public class CEPEngine {
 
 		return sinkString;
 	}
-
 }
