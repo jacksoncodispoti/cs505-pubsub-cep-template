@@ -31,14 +31,14 @@ public class API {
     }
 
     @GET
-    @Path("/api/getteam")
+    @Path("/getteam")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getteam(@HeaderParam("X-Auth-API-Key") String authKey) {
 	Map<String,String> responseMap = new HashMap<>();
 
 	JsonObject response = new JsonObject();
 
-	response.addProperty("team_name", "NickAndJackson");
+	response.addProperty("team_name", "Nick and Jackson");
 	response.addProperty("app_status_code", "1");
 
 	JsonArray teamMembers = new JsonArray();
@@ -57,13 +57,13 @@ public class API {
     }
 
     @GET
-    @Path("/api/reset")
+    @Path("/reset")
     @Produces(MediaType.APPLICATION_JSON)
     public Response reset(@HeaderParam("X-Auth-API-Key") String authKey) {
 	return null;
     }
     @GET
-    @Path("/api/zipalertlist")
+    @Path("/zipalertlist")
     @Produces(MediaType.APPLICATION_JSON)
     public Response ziperalertlist(@HeaderParam("X-Auth-API-Key") String authKey) {
 
@@ -71,7 +71,7 @@ public class API {
     }
 
     @GET
-    @Path("/api/alertlist")
+    @Path("/alertlist")
     @Produces(MediaType.APPLICATION_JSON)
     public Response alertlist(@HeaderParam("X-Auth-API-Key") String authKey) {
 
@@ -79,15 +79,35 @@ public class API {
     }
 
     @GET
-    @Path("/api/getpatient")
+    @Path("/testcount")
     @Produces(MediaType.APPLICATION_JSON)
     public Response testcount(@HeaderParam("X-Auth-API-Key") String authKey) {
+	Map<String,String> responseMap = new HashMap<>();
+
+	JsonObject response = new JsonObject();
+
+	response.addProperty("positive_test", Launcher.cepEngine.PositiveTests);
+	response.addProperty("negative_test", Launcher.cepEngine.NegativeTests);
+
+	JsonArray teamMembers = new JsonArray();
+	teamMembers.add(12200587);
+	teamMembers.add(12346767);
+
+	String responseString = gson.toJson(response);
+
+	return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
+    }
+
+    @GET
+    @Path("/getpatient")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getPatient(@HeaderParam("X-Auth-API-Key") String authKey) {
 
 	return null;
     }
 
     @GET
-    @Path("/api/gethospital")
+    @Path("/gethospital")
     @Produces(MediaType.APPLICATION_JSON)
     public Response gethospital(@HeaderParam("X-Auth-API-Key") String authKey) {
 	return null;

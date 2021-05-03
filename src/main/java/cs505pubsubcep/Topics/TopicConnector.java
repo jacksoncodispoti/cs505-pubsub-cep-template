@@ -28,10 +28,10 @@ public class TopicConnector {
 
         try {
 
-            String hostname = "";
-            String username = "";
-            String password = "";
-            String virtualhost = "";
+            String hostname = "128.163.202.50";
+            String username = "student";
+            String password = "student01";
+            String virtualhost = "8";
 
             ConnectionFactory factory = new ConnectionFactory();
             factory.setHost(hostname);
@@ -58,7 +58,8 @@ public class TopicConnector {
                 List<Map<String,String>> incomingList = gson.fromJson(message, typeOf);
                 for(Map<String,String> map : incomingList) {
                     System.out.println("INPUT CEP EVENT: " +  map);
-                    Launcher.cepEngine.input(Launcher.inputStreamName, gson.toJson(map));
+                    Launcher.cepEngine.input(Launcher.inputStreamName, map);
+                    //Launcher.cepEngine.input(Launcher.inputStreamName, gson.toJson(map));
                 }
                 System.out.println("");
                 System.out.println("");

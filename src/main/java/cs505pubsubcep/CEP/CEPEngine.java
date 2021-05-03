@@ -11,6 +11,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CEPEngine {
+    public int PositiveTests = 0;
+    public int NegativeTests = 0;
 
     private SiddhiManager siddhiManager;
     private SiddhiAppRuntime siddhiAppRuntime;
@@ -80,11 +82,27 @@ public class CEPEngine {
 
     }
 
-    public void input(String streamName, String jsonPayload) {
+    public void preProcess(Map<String, String> payload) {
+	if(payload.containsKey("patient_status_code")) {
+		String strStatusCode = payload.get("patient_status_code");
+		int statusCode = Integer.parseInt(strStatusCode);
+
+		if(statusCode == 1 || statusCode == 4) {
+			PositiveTests += 1;
+		}
+		else if(statusCode == 2 || statusCode == 5 || statusCode == 6) {
+			NegativeTests += 1;
+		}
+	}
+    }
+
+    public void input(String streamName, Map<String, String> payload) {
         try {
 
             if (topicMap.containsKey(streamName)) {
                 //InMemoryBroker.publish(topicMap.get(streamName), getByteGenericDataRecordFromString(schemaMap.get(streamName),jsonPayload));
+		String jsonPayload = gson.toJson(payload);
+		preProcess(payload);
                 InMemoryBroker.publish(topicMap.get(streamName), jsonPayload);
 
             } else {
