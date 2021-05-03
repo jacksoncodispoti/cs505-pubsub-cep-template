@@ -1,6 +1,8 @@
 package cs505pubsubcep.httpcontrollers;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
 import cs505pubsubcep.CEP.accessRecord;
 import cs505pubsubcep.Launcher;
 
@@ -31,20 +33,39 @@ public class API {
     @GET
     @Path("/api/getteam")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getteam(@HeadParam("X-Auth-API-Key") String authKey) {
-	return null;
+    public Response getteam(@HeaderParam("X-Auth-API-Key") String authKey) {
+	Map<String,String> responseMap = new HashMap<>();
+
+	JsonObject response = new JsonObject();
+
+	response.addProperty("team_name", "NickAndJackson");
+	response.addProperty("app_status_code", "1");
+
+	JsonArray teamMembers = new JsonArray();
+	teamMembers.add(12200587);
+	teamMembers.add(12346767);
+
+	//repsonse.addProperty("app_status_code", "1");
+
+	//responseMap.put("team_name", "NickAndJackson");
+	response.add("team_member_sids", teamMembers);
+	//responseMap.put("app_status_code", "1");
+	String responseString = gson.toJson(response);
+	//String responseString = gson.toJson(responseMap);
+
+	return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
     }
 
     @GET
     @Path("/api/reset")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response reset(@HeadParam("X-Auth-API-Key") String authKey) {
+    public Response reset(@HeaderParam("X-Auth-API-Key") String authKey) {
 	return null;
     }
     @GET
     @Path("/api/zipalertlist")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response ziperalertlist(@HeadParam("X-Auth-API-Key") String authKey) {
+    public Response ziperalertlist(@HeaderParam("X-Auth-API-Key") String authKey) {
 
 	return null;
     }
@@ -52,15 +73,7 @@ public class API {
     @GET
     @Path("/api/alertlist")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response alertlist(@HeadParam("X-Auth-API-Key") String authKey) {
-
-	return null;
-    }
-
-    @GET
-    @Path("/api/testcount")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response testcount(@HeadParam("X-Auth-API-Key") String authKey) {
+    public Response alertlist(@HeaderParam("X-Auth-API-Key") String authKey) {
 
 	return null;
     }
@@ -68,7 +81,7 @@ public class API {
     @GET
     @Path("/api/getpatient")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response testcount(@HeadParam("X-Auth-API-Key") String authKey) {
+    public Response testcount(@HeaderParam("X-Auth-API-Key") String authKey) {
 
 	return null;
     }
@@ -76,7 +89,7 @@ public class API {
     @GET
     @Path("/api/gethospital")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response gethospital(@HeadParam("X-Auth-API-Key") String authKey) {
+    public Response gethospital(@HeaderParam("X-Auth-API-Key") String authKey) {
 	return null;
     }
 
@@ -166,6 +179,4 @@ public class API {
     //    }
     //    return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
     //}
-
-
 }
