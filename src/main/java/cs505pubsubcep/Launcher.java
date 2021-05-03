@@ -36,15 +36,19 @@ public class Launcher {
         inputStreamName = "PatientInStream";
         String inputStreamAttributesString = "first_name string, last_name string, mrn string, zip_code string, patient_status_code string";
 
-        String outputStreamName = "PatientOutStream";
-        String outputStreamAttributesString = "patient_status_code string, count long";
+        String outputStreamName = "ZipPositive15";
+        String outputStreamAttributesString = "zip_code string, count long";
 
 
         String queryString = " " +
-                "from PatientInStream#window.timeBatch(5 sec) " +
-                "select patient_status_code, count() as count " +
-                "group by patient_status_code " +
-                "insert into PatientOutStream; ";
+                "FROM PatientInStream#window.timeBatch(15 sec)[patient_status_code == '2' OR patient_status_code == '5' OR patient_status_code == '6'] " +
+                "SELECT zip_code, count() as count " +
+		"INSERT INTO ZipPositive15;" +
+
+                "FROM PatientInStream#window.timeBatch(30 sec)[patient_status_code == '2' OR patient_status_code == '5' OR patient_status_code == '6'] " +
+                "SELECT zip_code, count() as count " +
+		"INSERT INTO ZipPositive30;"
+		;
 
         //END MODIFY
 
