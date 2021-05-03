@@ -96,13 +96,13 @@ public class CEPEngine {
 		String zip15Query = " " +
 			"FROM PatientInStream#window.timeBatch(15 sec)[patient_status_code == '2' OR patient_status_code == '5' OR patient_status_code == '6'] " +
 			"SELECT zip_code as zip_code_15, count() as count " +
-			"GROUP BY zip_code_15 " +
+			"GROUP BY zip_code " +
 			"INSERT INTO ZipPositive15; ";
 
 		String zip30Query = " " +
 			"FROM PatientInStream#window.timeBatch(30 sec)[patient_status_code == '2' OR patient_status_code == '5' OR patient_status_code == '6'] " +
 			"SELECT zip_code as zip_code_30, count() as count " +
-			"GROUP BY zip_code_30 " +
+			"GROUP BY zip_code " +
 			"INSERT INTO ZipPositive30; ";
 
 		return defaultQuery + zip15Query + zip30Query;
