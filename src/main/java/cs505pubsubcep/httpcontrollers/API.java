@@ -59,7 +59,11 @@ public class API {
     @Path("/reset")
     @Produces(MediaType.APPLICATION_JSON)
     public Response reset(@HeaderParam("X-Auth-API-Key") String authKey) {
-	return null;
+	Launcher.restart();
+	JsonObject response = new JsonObject();
+	response.addProperty("reset_status_code", 1);
+	String responseString = gson.toJson(response);
+	return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
     }
     @GET
     @Path("/zipalertlist")

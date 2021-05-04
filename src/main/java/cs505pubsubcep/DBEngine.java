@@ -275,6 +275,7 @@ public class DBEngine {
 	if(tableExist("alerts"))
 		dropTable("alerts");
 
+	patientMap = new HashMap<String, Boolean>();
 	initDB();
     }
 

@@ -138,9 +138,12 @@ public class CEPEngine {
 		loadHospitals("/home/ndfl222/cs505project/src/main/java/cs505pubsubcep/data/hospitals.csv");
 	}
 
-	public Event[] query(String query) {
-		System.out.println("Siddhi happlication " + siddhiAppRuntime);
-		return siddhiAppRuntime.query(query);
+	public void restart() {
+		PositiveTests = 0;
+		NegativeTests = 0;
+		siddhiAppRuntime.shutdown();
+		siddhiAppRuntime = null;
+		createCEP();
 	}
 
 	public void createCEP() {
@@ -203,7 +206,6 @@ public class CEPEngine {
 			String first_name = payload.get("first_name");
 			String last_name = payload.get("last_name");
 			try {
-				System.out.format("Assigning [%s] to [%s]", mrn, patient_assignment);
 				Launcher.dbEngine.assignHospital(mrn, first_name, last_name, patient_assignment);
 			}
 			catch(Exception ex) {
