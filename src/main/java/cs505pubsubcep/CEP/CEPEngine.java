@@ -14,6 +14,7 @@ import java.util.Scanner;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import cs505pubsubcep.Launcher;
 
 import com.opencsv.CSVReader;
 
@@ -75,12 +76,12 @@ public class CEPEngine {
 
 		//15 Second ZipCodePositiveStream
 		String zipStream15Name = "ZipPositive15";
-		String zipStream15Attributes = "zip_code_15 string, count long";
+		String zipStream15Attributes = "zip_code string, count long";
 		String zipStream15 = getSinkString(zipStream15Name, zipStream15Attributes);
 
 		//30 Second ZipCodePositiveStream
 		String zipStream30Name = "ZipPositive30";
-		String zipStream30Attributes = "zip_code_30 string, count long";
+		String zipStream30Attributes = "zip_code string, count long";
 		String zipStream30 = getSinkString(zipStream30Name, zipStream30Attributes);
 
 		return sourceString + hospitalString + outputStream + zipStream15 + zipStream30;
@@ -95,13 +96,13 @@ public class CEPEngine {
 
 		String zip15Query = " " +
 			"FROM PatientInStream#window.timeBatch(15 sec)[patient_status_code == '2' OR patient_status_code == '5' OR patient_status_code == '6'] " +
-			"SELECT zip_code as zip_code_15, count() as count " +
+			"SELECT zip_code, count() as count " +
 			"GROUP BY zip_code " +
 			"INSERT INTO ZipPositive15; ";
 
 		String zip30Query = " " +
 			"FROM PatientInStream#window.timeBatch(30 sec)[patient_status_code == '2' OR patient_status_code == '5' OR patient_status_code == '6'] " +
-			"SELECT zip_code as zip_code_30, count() as count " +
+			"SELECT zip_code, count() as count " +
 			"GROUP BY zip_code " +
 			"INSERT INTO ZipPositive30; ";
 
@@ -165,19 +166,49 @@ public class CEPEngine {
 
 	}
 
+	int getPatientAssignment(int statusCode, int zipCode) {
+		if(statusCode < 3 || statusCode == 4) {
+			return 0;
+		}
+		//Look for closest facility
+		if(statusCode == 3 || statusCode == 5) {
+			return Launcher.dbEngine.closestFacility(zipCode);
+		}
+		//Look for LEVEL IV or better facility
+		else if(statusCode == 6) {
+			return Launcher.dbEngine.closestLevelIV(zipCode);
+		}
+
+		return -1;
+	}
+
 	public void preProcess(Map<String, String> payload) {
 		if(payload.containsKey("patient_status_code")) {
 			String strStatusCode = payload.get("patient_status_code");
 			int statusCode = Integer.parseInt(strStatusCode);
 
+			//Increment counter
 			if(statusCode == 1 || statusCode == 4) {
 				PositiveTests += 1;
 			}
 			else if(statusCode == 2 || statusCode == 5 || statusCode == 6) {
 				NegativeTests += 1;
 			}
-			
+
 			//Do hospital assign logic
+			String strZipCode = payload.get("zip_code");
+			int zipCode = Integer.parseInt(strZipCode);
+			int patient_assignment = getPatientAssignment(statusCode, zipCode);
+			String mrn = payload.get("mrn");
+			String first_name = payload.get("first_name");
+			String last_name = payload.get("last_name");
+			try {
+				System.out.format("Assigning [%s] to [%s]", mrn, patient_assignment);
+				Launcher.dbEngine.assignHospital(mrn, first_name, last_name, patient_assignment);
+			}
+			catch(Exception ex) {
+				System.out.format("Unable to assign patient %s: %s", ex.getClass().getCanonicalName(), ex.getMessage());
+			}
 		}
 	}
 

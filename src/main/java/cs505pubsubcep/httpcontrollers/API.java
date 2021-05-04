@@ -65,20 +65,19 @@ public class API {
     @Path("/zipalertlist")
     @Produces(MediaType.APPLICATION_JSON)
     public Response ziperalertlist(@HeaderParam("X-Auth-API-Key") String authKey) {
-/*
+
 	JsonObject response = new JsonObject();
 
-	JsonArray teamMembers = new JsonArray();
-	Statement stm = Launcher.dbEngine.getStatement();
-	String query = "from ZipPositive15 Select zip_code ";
-	ResultSet results = stm.executeQuery(query)
+	JsonArray zips = new JsonArray();
+        for(int i=0;i<Launcher.isInAlert.length;i++)
+            if(Launcher.isInAlert[i])
+                zips.add(40000 + i);
+                
+	response.add("ziplist", zips);
 	
-	for(
-	teamMembers.add(12200587);
-	
-	response.add("team_member_sids", teamMembers);
-	*/
-	return null;
+	String responseString = gson.toJson(response);
+
+	return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
     }
 
     @GET
@@ -86,7 +85,21 @@ public class API {
     @Produces(MediaType.APPLICATION_JSON)
     public Response alertlist(@HeaderParam("X-Auth-API-Key") String authKey) {
 
-	return null;
+	JsonObject response = new JsonObject();
+
+        int count = 0;
+        for(int i=0;i<Launcher.isInAlert.length;i++)
+            if(Launcher.isInAlert[i])
+                count++;
+        
+        if(count>=5)      
+	    response.addProperty("state_status", 1);
+	else   
+	    response.addProperty("state_status", 0);
+	    
+	String responseString = gson.toJson(response);
+
+	return Response.ok(responseString).header("Access-Control-Allow-Origin", "*").build();
     }
 
     @GET

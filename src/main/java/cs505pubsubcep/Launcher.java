@@ -25,8 +25,13 @@ public class Launcher {
 
     public static int messageCounter = 0;
     public static String message30 = "";
+    public static boolean[] isInAlert = new boolean[2789]; // ex if danville(zip=40422) is in alert, isInAlert[422] = true
 
 
+    public static void restart() {
+	//cepEngine.restart();
+	dbEngine.restart();
+    }
     public static void main(String[] args) throws IOException {
 
 
