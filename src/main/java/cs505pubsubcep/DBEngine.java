@@ -24,7 +24,8 @@ import java.util.List;
 import java.util.Map;
 
 public class DBEngine {
-
+	private Connection cmdConnection;
+	private Statement cmdStatement;
     private DataSource ds;
     private Gson gson;
     private HashMap<String, Boolean> patientMap = new HashMap<String, Boolean>();
@@ -153,37 +154,23 @@ public class DBEngine {
 
 	stmt.executeUpdate(query);
     }
-    public Statement getStatement() {
-	try(Connection conn = ds.getConnection()) {
-		try(Statement stmt = conn.createStatement()) {
-			return stmt;
+    public ResultSet RresultExecute(String query) {
+	try(Connection connection = ds.getConnection()) {
+		try(Statement statement = connection.createStatement()) {
+			return statement.executeQuery(query);
 		}
 	}
 	catch(Exception ex) {
+		System.out.format("Error Apache Derby! %s:%s", ex.getClass().getCanonicalName(), ex.getMessage());
 		return null;
 	}
     }
 
-    //private long getTimeStamp() {
-
-    //}
-    //public boolean isAlerted(int zipcode) throw Exception {
-    //    return isAlerted(String.valueOf(zipcode));
-    //}
-    //public boolean isAlerted(String zipcode) throw Exception {
-    //    Statement stmt = getStatement();
-    //    String query = "SELECT alerted, timestamp FROM alerts WHERE zip = '" + zipcode + "'";
-    //    ResultSet results = stmt.executeQuery(query);
-
-    //    while(results.next()) {
-    //    	int alerted = results.getInt(1);
-    //    	long timestamp = results.getLong(2);
-    //    }
-    //    return false;
-    //}
-
     private void insertPatient(String mrn, String first_name, String last_name) {
 	patientMap.put(mrn, true);
+	String query = String.format("INSERT INTO patients (mrn, first_name, last_name, location_code) VALUES ('%s', '%s', '%s', -1)", mrn, first_name, last_name);
+
+	executeUpdate(query);
     }
     private boolean isPatientInserted(String mrn) {
 	if(patientMap.containsKey(mrn)) {
@@ -194,8 +181,6 @@ public class DBEngine {
 	}
     }
     public void assignHospital(String mrn, String first_name, String last_name, int location_code) throws Exception {
-	Statement stmt = getStatement();
-
 	if(!isPatientInserted(mrn)) {
 		insertPatient(mrn, first_name, last_name);
 	}
@@ -203,27 +188,34 @@ public class DBEngine {
 	int location_code_old = getPatientLocation(mrn);
 
 	if(location_code_old > 0) {
-		String removePatient = "UPDATE hospitals SET used_beds = used_beds - 1";
-		stmt.execute(removePatient);
+		String removePatient = "UPDATE hospitals SET used_beds = used_beds - 1 WHERE id LIKE '%" + location_code + "%'";
+		executeUpdate(removePatient);
 	}
 
-	String query = "UPDATE patients SET location_code = " + location_code + " WHERE mrn = '" + mrn + "'";
-	stmt.execute(query);
+	String query = "UPDATE patients SET location_code = " + location_code + " WHERE mrn LIKE '%" + mrn + "%'";
+	executeUpdate(query);
 
 	if(location_code > 0) {
-		String updateHospital = "UPDATE hospitals SET used_beds = used_beds + 1 WHERE id = '" + location_code + "'";
-		stmt.execute(updateHospital);
+		String updateHospital = "UPDATE hospitals SET used_beds = used_beds + 1 WHERE id LIKE '%" + location_code + "%'";
+		executeUpdate(updateHospital);
 	}
     }
     private int getPatientLocation(String mrn) throws Exception {
-	Statement stmt = getStatement();
-	String query = "SELECT location_code FROM patients WHERE mrn = '" + mrn + "'";
-	ResultSet results = stmt.executeQuery(query);
+	try(Connection connection = ds.getConnection()) {
+		try(Statement statement = connection.createStatement()) {
+			String query = "SELECT location_code FROM patients WHERE mrn = '" + mrn + "'";
 
-	while(results.next()) {
-		int location_id = results.getInt(1);
+			ResultSet results = statement.executeQuery(query);
 
-		return location_id;
+			while(results.next()) {
+				int location_id = results.getInt(1);
+
+				return location_id;
+			}
+		}
+	}
+	catch(Exception ex) {
+		System.out.format("Error Apache Derby! %s:%s", ex.getClass().getCanonicalName(), ex.getMessage());
 	}
 	return -1;
     }
@@ -237,28 +229,45 @@ public class DBEngine {
 	return gson.toJson(response);
     }
 
-    public String getHospital(int id) throws Exception {
-	Statement stmt = getStatement();
-	String query = "SELECT beds, used_beds, zip FROM hospitals WHERE id = '" + id + "'";
-	ResultSet results = stmt.executeQuery(query);
+    public int closestFacility(int zipCode) {
+	//TODO: REPLACE WITH LOGIC
+	return 1174020;
+    }
+    public int closestLevelIV(int zipCode) {
+	//TODO: REPLACE WITH LOGIC
+	return 1174020;
+    }
+    public String getHospital(int id) {
+	try(Connection connection = ds.getConnection()) {
+		try(Statement statement = connection.createStatement()) {
+			String query = "SELECT beds, used_beds, zip, id FROM hospitals WHERE id LIKE '%" + id + "%'";
+			//String query = "SELECT beds, used_beds, zip FROM hospitals";
+			ResultSet results = statement.executeQuery(query);
 
-	while(results.next()) {
-		int beds = results.getInt(1);
-		int used_beds = results.getInt(2);
-		int available_beds = beds - used_beds;
+			while(results.next()) {
+				int beds = results.getInt(1);
+				int used_beds = results.getInt(2);
+				int available_beds = beds - used_beds;
+				String sid = results.getString(4);
 
-		String zipCode = results.getString(3);
-		JsonObject response = new JsonObject();
-		response.addProperty("total_beds", beds);
-		response.addProperty("available_beds", available_beds);
-		response.addProperty("zipcode", zipCode);
+				String zipCode = results.getString(3);
+				JsonObject response = new JsonObject();
+				response.addProperty("id", sid);
+				response.addProperty("total_beds", beds);
+				response.addProperty("available_beds", available_beds);
+				response.addProperty("zipcode", zipCode);
 
-		return gson.toJson(response);
+				return gson.toJson(response);
+			}
+		}
 	}
-	return "Patient not found";
+	catch(Exception ex) {
+		System.out.format("Error Apache Derby! %s:%s", ex.getClass().getCanonicalName(), ex.getMessage());
+	}
+	return "Hospital not found";
     }
 
-    public void restartDB() {
+    public void restart() {
 	if(tableExist("hospitals"))
 		dropTable("hospitals");
 	if(tableExist("patients"))
@@ -309,13 +318,15 @@ public class DBEngine {
         try {
             try(Connection conn = ds.getConnection()) {
                 try (Statement stmt = conn.createStatement()) {
+			cmdConnection = conn;
+			cmdStatement = stmt;
 			if(!tableExist("hospitals"))
-			    stmt.executeUpdate(createHospitals);
+			    cmdStatement.executeUpdate(createHospitals);
 			if(!tableExist("patients"))
-			    stmt.executeUpdate(createPatients);
+			    cmdStatement.executeUpdate(createPatients);
 			if(!tableExist("alerts"))
-			    stmt.executeUpdate(createAlertList);
-		    loadData(stmt);
+			    cmdStatement.executeUpdate(createAlertList);
+		    loadData(cmdStatement);
                 }
             }
         } catch(Exception ex) {
