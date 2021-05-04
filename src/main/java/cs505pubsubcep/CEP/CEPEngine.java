@@ -21,7 +21,8 @@ import com.opencsv.CSVReader;
 public class CEPEngine {
 	public int PositiveTests = 0;
 	public int NegativeTests = 0;
-
+	private InMemoryBroker.Subscriber subscriber15;
+        private InMemoryBroker.Subscriber subscriber30;
 	public static final String INPUT_STREAM_NAME = "PatientInStream";
 	public static final String OUTPUT_STREAM_NAME = "PatientOutStream";
 	private SiddhiManager siddhiManager;
@@ -141,6 +142,8 @@ public class CEPEngine {
 	public void restart() {
 		PositiveTests = 0;
 		NegativeTests = 0;
+		InMemoryBroker.unsubscribe(subscriber15);
+		InMemoryBroker.unsubscribe(subscriber30);
 		siddhiAppRuntime.shutdown();
 		siddhiAppRuntime = null;
 		createCEP();
@@ -151,8 +154,8 @@ public class CEPEngine {
 			String createDatabaseString = createDatabase();
 			siddhiAppRuntime = siddhiManager.createSiddhiAppRuntime(createDatabaseString);
 
-			InMemoryBroker.Subscriber subscriber15 = new OutputSubscriber(topicMap.get("ZipPositive15"), "ZipPositive15");
-			InMemoryBroker.Subscriber subscriber30 = new OutputSubscriber(topicMap.get("ZipPositive30"), "ZipPositive30");
+			subscriber15 = new OutputSubscriber(topicMap.get("ZipPositive15"), "ZipPositive15");
+			subscriber30 = new OutputSubscriber(topicMap.get("ZipPositive30"), "ZipPositive30");
 
 			//subscribe to "inMemory" broker per topic
 			InMemoryBroker.subscribe(subscriber15);
@@ -175,7 +178,9 @@ public class CEPEngine {
 		}
 		//Look for closest facility
 		if(statusCode == 3 || statusCode == 5) {
-			return Launcher.dbEngine.closestFacility(zipCode);
+			System.out.println("Looking for facitliy");
+			int facility = Launcher.dbEngine.closestFacility(zipCode);
+			return facility;
 		}
 		//Look for LEVEL IV or better facility
 		else if(statusCode == 6) {
@@ -203,6 +208,7 @@ public class CEPEngine {
 			int zipCode = Integer.parseInt(strZipCode);
 			int patient_assignment = getPatientAssignment(statusCode, zipCode);
 			String mrn = payload.get("mrn");
+			System.out.format("assigning %s from %s to %d", mrn, strZipCode, patient_assignment);
 			String first_name = payload.get("first_name");
 			String last_name = payload.get("last_name");
 			try {

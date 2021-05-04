@@ -29,8 +29,11 @@ public class Launcher {
 
 
     public static void restart() {
+	System.out.println("restartin cep");
 	cepEngine.restart();
+	System.out.println("restaring dbengine");
 	dbEngine.restart();
+	System.out.println("Restart complete!");
     }
     public static void main(String[] args) throws IOException {
 

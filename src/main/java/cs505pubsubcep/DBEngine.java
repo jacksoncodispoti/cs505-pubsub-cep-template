@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 public class DBEngine {
-	private Connection cmdConnection;
-	private Statement cmdStatement;
     private DataSource ds;
     private Gson gson;
     private HospitalFinder finder;
@@ -244,10 +242,14 @@ public class DBEngine {
 	List<Integer> closest = finder.getClosestIds(zipCode);
 
 	for(int hospital : closest) {
-		if(isFull(hospital))
+		if(isFull(hospital)) {
+			System.out.println("Full, continuing");
 			continue;
+		}
+		System.out.println("Returnign hostpital " + hospital);
 		return hospital;
 	}
+	System.out.println("Just retungin 0");
 	
 	return 0;
     }
@@ -293,14 +295,19 @@ public class DBEngine {
     }
 
     public void restart() {
-	if(tableExist("hospitals"))
+	System.out.println("Starting restart");
+	if(tableExist("hospitals")){
+		System.out.println("\tDropping hostpitals");
 		dropTable("hospitals");
-	if(tableExist("patients"))
+	}
+	if(tableExist("patients")) {
+		System.out.println("\tDropping patietns");
 		dropTable("patients");
-	if(tableExist("alerts"))
-		dropTable("alerts");
+	}
+	System.out.println("\tDropped tables");
 
 	patientMap = new HashMap<String, Boolean>();
+	System.out.println("\tInitializing new db");
 	initDB();
     }
 
@@ -335,24 +342,18 @@ public class DBEngine {
 			"location_code INTEGER DEFAULT -1" +
 		")";
 
-	String createAlertList = "CREATE TABLE alerts(" +
-			"zip VARCHAR(5)," +
-			"alerted int default 0," +
-			"timestamp BIGINT" +
-		")";
-
         try {
             try(Connection conn = ds.getConnection()) {
                 try (Statement stmt = conn.createStatement()) {
-			cmdConnection = conn;
-			cmdStatement = stmt;
-			if(!tableExist("hospitals"))
-			    cmdStatement.executeUpdate(createHospitals);
-			if(!tableExist("patients"))
-			    cmdStatement.executeUpdate(createPatients);
-			if(!tableExist("alerts"))
-			    cmdStatement.executeUpdate(createAlertList);
-		    loadData(cmdStatement);
+
+		if(!tableExist("hospitals")) {
+			System.out.println("Creating hospitals");
+		    stmt.executeUpdate(createHospitals);
+			System.out.println("Creating patients");
+		    stmt.executeUpdate(createPatients);
+		}
+		System.out.println("Loading data");
+		    loadData(stmt);
                 }
             }
         } catch(Exception ex) {
