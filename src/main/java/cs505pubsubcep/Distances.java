@@ -1,8 +1,11 @@
 package cs505pubsubcep;
 
+import com.opencsv.CSVReader;
+import java.io.*;
 import java.io.*;
 import java.util.Scanner;
 import java.util.HashMap;
+import java.util.Set;
 import java.lang.IllegalArgumentException;
 
 public class Distances {
@@ -13,6 +16,10 @@ public class Distances {
 	public Distances(int size) {
 		zip_index_map = new HashMap<Integer, Integer>();
 		distance_table = new float[size][size];
+	}
+
+	public Set<Integer> zipCodes() {
+		return zip_index_map.keySet();	
 	}
 
 	public void set_distance(int zip_a, int zip_b, float distance) {
@@ -37,25 +44,29 @@ public class Distances {
 		return distance_table[a_index][b_index];
 	}
 
-	public static Distances load(String file_path) throws FileNotFoundException {
-		Scanner scanner = new Scanner(new File(file_path));
-		scanner.useDelimiter(",");
+	public static Distances load(String file_path) throws Exception {
+		Reader reader = new FileReader(file_path);
+		CSVReader csvReader = new CSVReader(reader);
+
 		HashMap<Integer, HashMap<Integer, Float>> map = new HashMap<Integer, HashMap<Integer, Float>>();
 
+		String[] headers = csvReader.readNext();
+		String[] row;
+		
 		int distinct_zip_count = 0;
-		while(scanner.hasNext()) {
-			int zip_a = scanner.nextInt();
-			int zip_b = scanner.nextInt();
-			float distance = scanner.nextFloat();
+		while((row = csvReader.readNext()) != null) {
+			int zip_a = Integer.parseInt(row[0]);
+			int zip_b = Integer.parseInt(row[1]);
+			float distance = Float.parseFloat(row[2]);
 
 			if(map.containsKey(zip_a)) {
 				map.get(zip_a).put(zip_b, distance);	
-				distinct_zip_count++;
 			}
 			else {
 				HashMap<Integer, Float> nestedMap = new HashMap<Integer, Float>();
 				nestedMap.put(zip_b, distance);
 				map.put(zip_a, nestedMap);
+				distinct_zip_count++;
 			}
 		}
 
@@ -67,6 +78,7 @@ public class Distances {
 			}
 		}
 
+		System.out.println("Loaded distances");
 		return distances;
 	}
 }

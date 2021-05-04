@@ -28,6 +28,7 @@ public class DBEngine {
 	private Statement cmdStatement;
     private DataSource ds;
     private Gson gson;
+    private HospitalFinder finder;
     private HashMap<String, Boolean> patientMap = new HashMap<String, Boolean>();
 
     public DBEngine() {
@@ -43,7 +44,7 @@ public class DBEngine {
             //Connection string pointing to a local file location
             String dbConnectionString = "jdbc:derby:memory:" + databaseName + ";create=true";
             ds = setupDataSource(dbConnectionString);
-
+ 		finder = HospitalFinder.load("/home/ndfl222/cs505project/src/main/java/cs505pubsubcep/data/hospitals.csv");
             /*
             if(!databaseExist(databaseName)) {
                 System.out.println("No database, creating " + databaseName);
@@ -154,17 +155,6 @@ public class DBEngine {
 
 	stmt.executeUpdate(query);
     }
-    public ResultSet RresultExecute(String query) {
-	try(Connection connection = ds.getConnection()) {
-		try(Statement statement = connection.createStatement()) {
-			return statement.executeQuery(query);
-		}
-	}
-	catch(Exception ex) {
-		System.out.format("Error Apache Derby! %s:%s", ex.getClass().getCanonicalName(), ex.getMessage());
-		return null;
-	}
-    }
 
     private void insertPatient(String mrn, String first_name, String last_name) {
 	patientMap.put(mrn, true);
@@ -229,13 +219,48 @@ public class DBEngine {
 	return gson.toJson(response);
     }
 
+    private boolean isFull(int id) {
+	try(Connection connection = ds.getConnection()) {
+		try(Statement statement = connection.createStatement()) {
+			String query = "SELECT beds, used_beds FROM hospitals WHERE id LIKE '%" + id + "%'";
+			//String query = "SELECT beds, used_beds, zip FROM hospitals";
+			ResultSet results = statement.executeQuery(query);
+
+			while(results.next()) {
+				int beds = results.getInt(1);
+				int used_beds = results.getInt(2);
+				int available_beds = beds - used_beds;
+
+				return available_beds == 0;
+			}
+		}
+	}
+	catch(Exception ex) {
+		System.out.format("Error Apache Derby! %s:%s", ex.getClass().getCanonicalName(), ex.getMessage());
+	}
+	return true;
+    }
     public int closestFacility(int zipCode) {
-	//TODO: REPLACE WITH LOGIC
-	return 1174020;
+	List<Integer> closest = finder.getClosestIds(zipCode);
+
+	for(int hospital : closest) {
+		if(isFull(hospital))
+			continue;
+		return hospital;
+	}
+	
+	return 0;
     }
     public int closestLevelIV(int zipCode) {
-	//TODO: REPLACE WITH LOGIC
-	return 1174020;
+	List<Integer> closest = finder.getClosestIVIds(zipCode);
+
+	for(int hospital : closest) {
+		if(isFull(hospital))
+			continue;
+		return hospital;
+	}
+	
+	return 0;
     }
     public String getHospital(int id) {
 	try(Connection connection = ds.getConnection()) {
